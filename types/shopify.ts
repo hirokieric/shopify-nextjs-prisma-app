@@ -23,9 +23,12 @@ export type ShopifyConfig = ConfigParams & {
 };
 
 export interface ShopifySession extends Session {
+  id: string;
   shop: string;
-  accessToken: string;
-  scope: string;
+  state: string;
+  isOnline: boolean;
+  scope?: string;
+  accessToken?: string;
   expires?: Date;
 }
 
@@ -62,3 +65,17 @@ export type ShopifyInstance = Shopify & {
     }>;
   };
 };
+
+export interface ShopifyClient {
+  clients: {
+    Graphql: new (params: { session: ShopifySession }) => any;
+  };
+  session: {
+    getOfflineId: (shop: string) => string;
+    getCurrentId: (params: {
+      isOnline: boolean;
+      rawRequest: any;
+      rawResponse: any;
+    }) => Promise<string | undefined>;
+  };
+}

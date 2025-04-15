@@ -1,6 +1,7 @@
 import { ApiRequest, ApiResponse } from "../types/api";
 import { ShopifySession } from "../types/shopify";
-import { ClientProvider } from "../types/utils";
+import { ClientProvider, GraphQLClientOptions } from "../types/utils";
+import { GraphqlClient } from "@shopify/shopify-api";
 import sessionHandler from "./sessionHandler";
 import shopify from "./shopify";
 
@@ -28,20 +29,24 @@ const fetchOfflineSession = async (
  * Provides methods to create clients for offline access.
  * @namespace offline
  */
-const offlineClientProvider: ClientProvider = {
+const offlineClientProvider = {
   /**
    * Creates a Shopify GraphQL client for offline access.
    * @async
    * @param {Object} params - The request and response objects.
    * @param {string} params.shop - The shop's domain
    */
-  graphqlClient: async ({ shop }) => {
-    const session = await fetchOfflineSession(shop || "");
+  graphqlClient: async (options: GraphQLClientOptions) => {
+    const { shop } = options;
+    if (!shop) {
+      throw new Error("Shop is required for offline access");
+    }
+    const session = await fetchOfflineSession(shop);
     if (!session) {
       throw new Error("No session found");
     }
     const client = new shopify.clients.Graphql({ session });
-    return client;
+    return { client };
   },
 };
 
@@ -52,18 +57,15 @@ const offlineClientProvider: ClientProvider = {
  * @param {import('next').NextApiRequest} params.req - The Next.js API request object
  * @param {import('next').NextApiResponse} params.res - The Next.js API response object
  */
-const fetchOnlineSession = async ({
-  req,
-  res,
-}: {
+const fetchOnlineSession = async (options: {
   req: ApiRequest;
   res: ApiResponse;
 }): Promise<ShopifySession | null> => {
   try {
     const sessionId = await shopify.session.getCurrentId({
       isOnline: true,
-      rawRequest: req,
-      rawResponse: res,
+      rawRequest: options.req,
+      rawResponse: options.res,
     });
     if (!sessionId) {
       return null;
@@ -82,7 +84,7 @@ const fetchOnlineSession = async ({
  * Provides methods to create clients for online access.
  * @namespace online
  */
-const onlineClientProvider: ClientProvider = {
+const onlineClientProvider = {
   /**
    * Creates a Shopify GraphQL client for online access.
    * @async
@@ -90,7 +92,8 @@ const onlineClientProvider: ClientProvider = {
    * @param {import('next').NextApiRequest} params.req - The Next.js API request object
    * @param {import('next').NextApiResponse} params.res - The Next.js API response object
    */
-  graphqlClient: async ({ req, res }) => {
+  graphqlClient: async (options: GraphQLClientOptions) => {
+    const { req, res } = options;
     if (!req || !res) {
       throw new Error("Request and response objects are required");
     }
@@ -99,7 +102,7 @@ const onlineClientProvider: ClientProvider = {
       throw new Error("No session found");
     }
     const client = new shopify.clients.Graphql({ session });
-    return client;
+    return { client };
   },
 };
 
@@ -107,7 +110,7 @@ const onlineClientProvider: ClientProvider = {
  * Provides GraphQL client providers for both online and offline access.
  * @namespace clientProvider
  */
-const clientProvider = {
+const clientProvider: ClientProvider = {
   offline: offlineClientProvider,
   online: onlineClientProvider,
 };

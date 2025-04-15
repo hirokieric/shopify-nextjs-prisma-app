@@ -1,9 +1,10 @@
 import { Session } from "@shopify/shopify-api";
+import { cookies } from "next/headers";
 import cryption from "./cryption";
 import prisma from "./prisma";
 
 /**
- * Stores the session data into the database.
+ * Stores the session data into the database and sets the session cookie.
  */
 const storeSession = async (session: Session): Promise<boolean> => {
   await prisma.session.upsert({
@@ -19,13 +20,30 @@ const storeSession = async (session: Session): Promise<boolean> => {
     },
   });
 
+  const cookieStore = await cookies();
+  cookieStore.set("shopify_session", session.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+
   return true;
 };
 
 /**
- * Loads the session data from the database.
+ * Loads the session data from the database using the session cookie.
  */
-const loadSession = async (id: string): Promise<Session | undefined> => {
+const loadSession = async (id?: string): Promise<Session | undefined> => {
+  // If no id provided, try to get it from cookie
+  if (!id) {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("shopify_session");
+    if (!sessionCookie) {
+      return undefined;
+    }
+    id = sessionCookie.value;
+  }
+
   const sessionResult = await prisma.session.findUnique({ where: { id } });
 
   if (!sessionResult || !sessionResult.content) {
@@ -42,10 +60,14 @@ const loadSession = async (id: string): Promise<Session | undefined> => {
 };
 
 /**
- * Deletes the session data from the database.
+ * Deletes the session data from the database and removes the session cookie.
  */
 const deleteSession = async (id: string): Promise<boolean> => {
   await prisma.session.deleteMany({ where: { id } });
+
+  // Remove session cookie
+  const cookieStore = await cookies();
+  cookieStore.delete("shopify_session");
 
   return true;
 };

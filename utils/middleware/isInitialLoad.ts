@@ -3,28 +3,17 @@ import sessionHandler from "../sessionHandler";
 import shopify from "../shopify";
 import freshInstall from "../freshInstall";
 import prisma from "../prisma";
-import { GetServerSidePropsContext } from "next";
+import { cookies } from "next/headers";
 
 /**
  * @async
- * @param {{
- *   params: { [key: string]: string | undefined },
- *   req: import('http').IncomingMessage,
- *   res: import('http').ServerResponse,
- *   query: { [key: string]: string | string[] },
- *   preview?: boolean,
- *   previewData?: any,
- *   resolvedUrl: string,
- *   locale?: string,
- *   locales?: string[],
- *   defaultLocale?: string
- * }} context
- * @returns {Promise<{props: { [key: string]: any } | undefined}>} Object with props to be passed to the page component.
+ * @returns {Promise<void>}
  */
-const isInitialLoad = async (context: GetServerSidePropsContext) => {
+const isInitialLoad = async () => {
   try {
-    const shop = context.query.shop as string;
-    const idToken = context.query.id_token as string;
+    const cookieStore = await cookies();
+    const shop = cookieStore.get("shop")?.value;
+    const idToken = cookieStore.get("id_token")?.value;
 
     //Initial Load
     if (idToken && shop) {
@@ -58,11 +47,6 @@ const isInitialLoad = async (context: GetServerSidePropsContext) => {
       // The user has visited the page again.
       // We know this because we're not preserving any url params and idToken doesn't exist here
     }
-    return {
-      props: {
-        data: "ok",
-      },
-    };
   } catch (e) {
     const error = e as Error;
     if (
@@ -77,17 +61,7 @@ const isInitialLoad = async (context: GetServerSidePropsContext) => {
         `---> An error occured at isInitialLoad: ${error.message}`,
         error
       );
-      return {
-        props: {
-          serverError: true,
-        },
-      };
     }
-    return {
-      props: {
-        data: "ok",
-      },
-    };
   }
 };
 
