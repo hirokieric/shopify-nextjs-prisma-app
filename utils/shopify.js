@@ -1,6 +1,6 @@
 import { LogSeverity, shopifyApi } from "@shopify/shopify-api";
 import "@shopify/shopify-api/adapters/node";
-import appUninstallHandler from "./webhooks/app_uninstalled.js";
+import appUninstallHandler from "./webhooks/app_uninstalled";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -18,8 +18,7 @@ let shopify = shopifyApi({
 
 /*
   Template for adding new topics:
-  ```
-    {
+  ```    {
       topics: ["",""] //Get this from `https://shopify.dev/docs/api/webhooks?reference=toml`
       url: "/api/webhooks/topic_name" //this can be AWS, PubSub or HTTP routes.
       callback: () //This HAS to be in utils/webhooks/ and created with the `createwebhook` snippet.
@@ -52,4 +51,18 @@ shopify = {
   },
 };
 
-export default shopify;
+export default {
+  ...shopify,
+  auth: shopify.auth,
+  clients: shopify.clients,
+  session: shopify.session,
+  user: {
+    webhooks: [
+      {
+        topics: ["app/uninstalled"],
+        url: "/api/webhooks/app_uninstalled",
+        callback: appUninstallHandler,
+      },
+    ],
+  },
+};

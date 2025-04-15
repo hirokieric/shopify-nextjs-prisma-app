@@ -1,14 +1,14 @@
 {
-  "name": "shopify-nextjs-prisma-app",
-  "version": "2025.04.06",
+  "name": "shopify-nextjs-prisma-app-ts",
+  "version": "2025.04.14",
   "type": "module",
   "author": {
-    "name": "Harshdeep Singh Hura",
-    "url": "https://harshdeephura.com"
+    "name": "Hiroki Naito",
+    "url": "https://www.enprods.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/kinngh/shopify-nextjs-prisma-app.git"
+    "url": "https://github.com/hirokieric/shopify-nextjs-prisma-app.git"
   },
   "scripts": {
     "dev": "next dev",
@@ -17,9 +17,7 @@
     "pretty": "prettier --write ./",
     "update": "ncu -u",
     "-----> Tunnel <-----": "",
-    "ngrok:auth": "ngrok authtoken <auth-token-goes-here>",
-    "ngrok": "ngrok http 3000",
-    "cloudflare": "cloudflared tunnel --url localhost:3000",
+    "cloudflare": "cloudflared tunnel run",
     "-----> Shopify <-----": "",
     "g:install": "npm i -g @shopify/cli@latest",
     "shopify": "shopify",
@@ -37,12 +35,16 @@
     "prisma:push": "npx prisma db push",
     "prisma:pull": "npx prisma db pull",
     "-----> Reserved Scripts <-----": "",
-    "prepare": "npx prisma generate"
+    "prepare": "npx prisma generate",
+    "-----> GraphQL <-----": "",
+    "codegen": "graphql-codegen",
+    "codegen:watch": "graphql-codegen --watch"
   },
   "dependencies": {
-    "@prisma/client": "^6.5.0",
+    "@prisma/client": "^6.6.0",
     "@shopify/polaris": "^13.9.5",
-    "@shopify/shopify-api": "^11.11.1",
+    "@shopify/polaris-icons": "^9.3.1",
+    "@shopify/shopify-api": "^11.12.0",
     "cryptr": "^6.3.0",
     "next": "15.2.4",
     "next-api-middleware": "^3.0.0",
@@ -50,12 +52,19 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.5",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@graphql-codegen/typescript-operations": "^4.6.0",
+    "@graphql-codegen/typescript-react-apollo": "^4.3.2",
     "@iarna/toml": "^2.2.5",
-    "@shopify/cli-kit": "^3.77.1",
-    "dotenv": "^16.4.7",
-    "ngrok": "^5.0.0-beta.2",
-    "npm-check-updates": "^17.1.16",
+    "@shopify/cli-kit": "^3.78.0",
+    "@types/node": "^20.14.11",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "dotenv": "^16.5.0",
+    "npm-check-updates": "^17.1.18",
     "prettier": "^3.5.3",
-    "prisma": "^6.5.0"
+    "prisma": "^6.6.0",
+    "typescript": "^5.5.3"
   }
 }
