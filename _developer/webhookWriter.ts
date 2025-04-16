@@ -531,14 +531,25 @@ const availableTopics: ApiEndpoint[] = [
 ];
 
 const webhookWriter = (config: AppConfig) => {
+  if (!config.webhooks) {
+    config.webhooks = {};
+  }
+  if (!config.webhooks.subscriptions) {
+    config.webhooks.subscriptions = [];
+  }
+
   const subscriptionsArray: WebhookSubscription[] = [];
 
   Object.entries(shopify.webhooks).forEach(([_, webhook]) => {
     const subscription: WebhookSubscription = {
-      topics: webhook.topics,
-      uri: webhook.url.startsWith("/api/webhooks/")
-        ? `${process.env.SHOPIFY_APP_URL}${webhook.url}`
-        : webhook.url,
+      topics: webhook.topics || [],
+      uri:
+        webhook.url && webhook.url.startsWith("/api/webhooks/")
+          ? `${process.env.SHOPIFY_APP_URL}${webhook.url}`
+          : webhook.url ||
+            (webhook.topics && webhook.topics.length > 0
+              ? `${process.env.SHOPIFY_APP_URL}/api/webhooks/${webhook.topics[0]}`
+              : `${process.env.SHOPIFY_APP_URL}/api/webhooks/default`),
     };
 
     if (webhook.include_fields) {
@@ -552,9 +563,6 @@ const webhookWriter = (config: AppConfig) => {
     subscriptionsArray.push(subscription);
   });
 
-  if (!config.webhooks) {
-    config.webhooks = {};
-  }
   config.webhooks.subscriptions = subscriptionsArray;
 
   writeToApi();
@@ -628,7 +636,7 @@ async function writeToApi() {
       : "switch (validateWebhook.topic) {\n";
 
     Object.values(shopify.webhooks).forEach((entry: WebhookConfig) => {
-      if (entry.url.startsWith("/api/webhooks")) {
+      if (entry.url && entry.url.startsWith("/api/webhooks")) {
         const handlerName = entry.callback.name;
         if (hasDuplicateTopics) {
           switchCaseStatement += `  case "${entry.url}":\n`;
@@ -662,7 +670,7 @@ async function writeToApi() {
 
     fs.writeFileSync(webhookTopicFilePath, webhookTopicFileContent, "utf8");
   } catch (error) {
-    console.error("Error writing to webhookTopic file:", error);
+    console.error("Error writing to webhook topic file:", error);
   }
 }
 

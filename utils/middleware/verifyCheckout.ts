@@ -1,56 +1,56 @@
+// lib/middleware/verifyCheckout.ts
 import shopify from "@/utils/shopify";
 import validateJWT from "../validateJWT";
-import { NextApiRequest, NextApiResponse } from "next";
+import type { MiddlewareFn } from "@/types/middleware";
 
-type NextApiHandler = (
-  req: NextApiRequest,
-  res: NextApiResponse
-) => Promise<void>;
-
-/**
- *
- * @async
- * @function verifyCheckout
- * @param {import('next').NextApiRequest} req - The Next.js API request object, expected to have an 'authorization' header.
- * @param {import('next').NextApiResponse} res - The Next.js API response object, used to send back error messages if needed.
- * @param {import('next').NextApiHandler} next - Callback to pass control to the next middleware function in the Next.js API route.
- * @throws Will throw an error if the authorization header is missing or invalid, or if no shop is found in the payload.
- */
-const verifyCheckout = async (
-  req: NextApiRequest,
-  res: NextApiResponse,
-  next: NextApiHandler
+export const verifyCheckout: MiddlewareFn<{ shop: string }> = async (
+  req: Request
 ) => {
-  //You'll first get a OPTIONS request before you get a GET/POST
+  // OPTIONS リクエストの場合はプリフライトとして 200 を返す
   if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
+    return {
+      success: false,
+      response: new Response(null, { status: 200 }),
+    };
   }
 
   try {
-    const authHeader = req.headers["authorization"];
+    const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      throw Error("No authorization header found.");
+      return {
+        success: false,
+        response: new Response("No authorization header found.", {
+          status: 401,
+        }),
+      };
     }
+    const token = authHeader.split(" ")[1];
+    const payload = validateJWT(token);
 
-    const payload = validateJWT(authHeader.split(" ")[1]);
-
-    let shop = shopify.utils.sanitizeShop(payload.dest.replace("https://", ""));
-    if (!shop) {
-      throw Error("No shop found, not a valid request");
-    }
-
-    req.user_shop = shop;
-
-    await next(req, res);
-    return;
-  } catch (e) {
-    const error = e as Error;
-    console.error(
-      `---> An error happened at verifyCheckout middleware: ${error.message}`
+    const shop = shopify.utils.sanitizeShop(
+      payload.dest.replace("https://", "")
     );
-    return res.status(401).send({ error: "Unauthorized call" });
+    if (!shop) {
+      return {
+        success: false,
+        response: new Response("No shop found, not a valid request", {
+          status: 401,
+        }),
+      };
+    }
+
+    return { success: true, data: { shop } };
+  } catch (e: any) {
+    console.error(
+      "---> An error happened at verifyCheckout middleware:",
+      e.message
+    );
+    return {
+      success: false,
+      response: new Response(JSON.stringify({ error: "Unauthorized call" }), {
+        status: 401,
+        headers: { "content-type": "application/json" },
+      }),
+    };
   }
 };
-
-export default verifyCheckout;

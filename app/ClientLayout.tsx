@@ -17,6 +17,7 @@ const ClientLayout: FC<ClientLayoutProps> = ({ children }) => {
       <AppBridgeProvider>
         <ui-nav-menu>
           <Link href="/debug">Debug Cards</Link>
+          <Link href="/test">Test</Link>
         </ui-nav-menu>
         <Frame>{children}</Frame>
       </AppBridgeProvider>

@@ -1,30 +1,30 @@
+// lib/middleware/verifyProxy.ts
 import crypto from "crypto";
-import { NextApiRequest, NextApiResponse } from "next";
-
-type NextApiHandler = (
-  req: NextApiRequest,
-  res: NextApiResponse
-) => Promise<void>;
+import type { MiddlewareFn } from "@/types/middleware";
 
 if (!process.env.SHOPIFY_API_SECRET) {
   throw new Error("SHOPIFY_API_SECRET is not defined");
 }
 
-/**
- * @param {import('next').NextApiRequest} req - The incoming request object.
- * @param {import('next').NextApiResponse} res - The response object.
- * @param {import('next').NextApiHandler} next - Callback to pass control to the next middleware function in the Next.js API route.
- */
-const verifyProxy = async (
-  req: NextApiRequest,
-  res: NextApiResponse,
-  next: NextApiHandler
-) => {
-  const { signature } = req.query;
+export const verifyProxy: MiddlewareFn<{ shop: string }> = async (req) => {
+  // URL をパースしてクエリパラメータをオブジェクト化
+  const url = new URL(req.url);
+  const query = Object.fromEntries(url.searchParams.entries());
 
-  const queryURI = encodeQueryData(req.query)
-    .replace("/?", "")
-    .replace(/&signature=[^&]*/, "")
+  const signature = query.signature;
+  if (!signature) {
+    return {
+      success: false,
+      response: new Response("Missing signature", {
+        status: 400,
+        headers: { "content-type": "text/plain" },
+      }),
+    };
+  }
+
+  // 計算用に signature を除外
+  const { signature: _, ...restQuery } = query;
+  const queryURI = encodeQueryData(restQuery)
     .split("&")
     .map((x) => decodeURIComponent(x))
     .sort()
@@ -36,26 +36,41 @@ const verifyProxy = async (
     .digest("hex");
 
   if (calculatedSignature === signature) {
-    req.user_shop = req.query.shop as string;
-    await next(req, res);
+    const shop = query.shop;
+    if (!shop) {
+      return {
+        success: false,
+        response: new Response("Missing shop parameter", {
+          status: 400,
+          headers: { "content-type": "text/plain" },
+        }),
+      };
+    }
+    return { success: true, data: { shop } };
   } else {
-    return res.status(401).send({
+    return {
       success: false,
-      message: "Signature verification failed",
-    });
+      response: new Response(
+        JSON.stringify({
+          success: false,
+          message: "Signature verification failed",
+        }),
+        {
+          status: 401,
+          headers: { "content-type": "application/json" },
+        }
+      ),
+    };
   }
 };
 
 /**
- * Encodes the provided data into a URL query string format.
- *
- * @param {Record<string, any>} data - The data to be encoded.
- * @returns {string} The encoded query string.
+ * 指定オブジェクトを URL クエリ文字列へエンコードするヘルパー関数
  */
 function encodeQueryData(data: Record<string, any>): string {
-  const queryString = [];
-  for (let d in data) queryString.push(d + "=" + encodeURIComponent(data[d]));
+  const queryString: string[] = [];
+  for (let key in data) {
+    queryString.push(`${key}=${encodeURIComponent(data[key])}`);
+  }
   return queryString.join("&");
 }
-
-export default verifyProxy;

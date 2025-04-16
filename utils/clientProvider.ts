@@ -1,7 +1,6 @@
 import { ApiRequest, ApiResponse } from "../types/api";
 import { ShopifySession } from "../types/shopify";
 import { ClientProvider, GraphQLClientOptions } from "../types/utils";
-import { GraphqlClient } from "@shopify/shopify-api";
 import sessionHandler from "./sessionHandler";
 import shopify from "./shopify";
 
