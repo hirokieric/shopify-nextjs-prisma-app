@@ -2,95 +2,40 @@ import toml from "@iarna/toml";
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
-import setupCheck from "../utils/setupCheck.js";
-import webhookWriter from "./webhookWriter.js";
+import setupCheck from "../utils/setupCheck";
+import webhookWriter from "./webhookWriter";
+import type { TomlConfig } from "../types/toml";
 
-interface JsonMap {
-  [key: string]: any;
-}
-
-interface AppConfig extends JsonMap {
-  name?: string;
-  handle?: string;
-  client_id?: string;
-  application_url?: string;
-  embedded?: boolean;
-  extension_directories?: string[];
-  auth?: {
-    redirect_urls?: string[];
-  };
-  access_scopes?: {
-    scopes?: string;
-    optional_scopes?: string[];
-    use_legacy_install_flow?: boolean;
-  };
-  access?: {
-    admin?: {
-      direct_api_mode?: string;
-      embedded_app_direct_api_access?: boolean;
-    };
-  };
-  webhooks?: {
-    api_version?: string;
-    privacy_compliance?: {
-      customer_data_request_url?: string;
-      customer_deletion_url?: string;
-      shop_deletion_url?: string;
-    };
-    subscriptions?: any[];
-  };
-  app_proxy?: {
-    url?: string;
-    prefix?: string;
-    subpath?: string;
-  };
-  pos?: {
-    embedded?: boolean;
-  };
-  build?: {
-    include_config_on_deploy?: boolean;
-  };
-}
-
-let config: AppConfig = {};
+let config: Partial<TomlConfig> = {};
 
 try {
-  setupCheck();
+  setupCheck(); //Run setup check to ensure all env variables are accessible
 
   let appUrl = process.env.SHOPIFY_APP_URL;
-  if (!appUrl) {
-    throw new Error("SHOPIFY_APP_URL is not defined");
-  }
-  if (appUrl.endsWith("/")) {
+  if (appUrl?.endsWith("/")) {
     appUrl = appUrl.slice(0, -1);
   }
+  // Globals
+  config.name = process.env.APP_NAME!;
+  config.handle = process.env.APP_HANDLE!;
+  config.client_id = process.env.SHOPIFY_API_KEY!;
+  config.application_url = appUrl!;
+  config.embedded = true;
+  config.extension_directories = ["../extension/extensions/**"];
 
-  config = {
-    name: process.env.APP_NAME,
-    handle: process.env.APP_HANDLE,
-    client_id: process.env.SHOPIFY_API_KEY,
-    application_url: appUrl,
-    embedded: true,
-    extension_directories: ["../extension/extensions/**"],
-    auth: {
-      redirect_urls: [`${appUrl}/api/`],
-    },
-    access_scopes: {
-      scopes: process.env.SHOPIFY_API_SCOPES,
-      use_legacy_install_flow: false,
-    },
-    webhooks: {
-      api_version: process.env.SHOPIFY_API_VERSION,
-      privacy_compliance: {
-        customer_data_request_url: `${appUrl}/api/gdpr/customers_data_request`,
-        customer_deletion_url: `${appUrl}/api/gdpr/customers_redact`,
-        shop_deletion_url: `${appUrl}/api/gdpr/shop_redact`,
-      },
-    },
+  // Auth
+  config.auth = {
+    redirect_urls: [`${appUrl}/api/`],
+  };
+
+  // Scopes
+  config.access_scopes = {
+    scopes: process.env.SHOPIFY_API_SCOPES!,
+    use_legacy_install_flow: false,
   };
 
   if (process.env.SHOPIFY_API_OPTIONAL_SCOPES?.trim()) {
-    config.access_scopes!.optional_scopes =
+    config.access_scopes.optional_scopes =
       process.env.SHOPIFY_API_OPTIONAL_SCOPES.split(",")
         .map((scope) => scope.trim())
         .filter(Boolean);
@@ -100,51 +45,75 @@ try {
     process.env.DIRECT_API_MODE &&
     process.env.EMBEDDED_APP_DIRECT_API_ACCESS
   ) {
+    // Access
     config.access = {
       admin: {
-        direct_api_mode: process.env.DIRECT_API_MODE,
+        direct_api_mode: process.env.DIRECT_API_MODE as "online" | "offline",
         embedded_app_direct_api_access:
           process.env.EMBEDDED_APP_DIRECT_API_ACCESS === "true",
       },
     };
   }
 
-  if (process.env.APP_PROXY_PREFIX && process.env.APP_PROXY_SUBPATH) {
+  // Webhook event version to always match the app API version
+  config.webhooks = {
+    api_version: process.env.SHOPIFY_API_VERSION as
+      | "2024-07"
+      | "2024-10"
+      | "2025-01"
+      | "2025-04",
+    privacy_compliance: {
+      customer_data_request_url: `${appUrl}/api/gdpr/customers_data_request`,
+      customer_deletion_url: `${appUrl}/api/gdpr/customers_redact`,
+      shop_deletion_url: `${appUrl}/api/gdpr/shop_redact`,
+    },
+  };
+
+  // Webhooks
+  webhookWriter(config as TomlConfig);
+
+  // App Proxy
+  const appProxyPrefix = process.env.APP_PROXY_PREFIX;
+  const appProxySubpath = process.env.APP_PROXY_SUBPATH;
+  if (appProxyPrefix && appProxySubpath) {
     config.app_proxy = {
       url: `${appUrl}/api/proxy_route`,
-      prefix: process.env.APP_PROXY_PREFIX,
-      subpath: process.env.APP_PROXY_SUBPATH,
+      prefix: appProxyPrefix as "apps" | "a" | "community" | "tools",
+      subpath: appProxySubpath,
     };
   }
 
-  if (process.env.POS_EMBEDDED) {
+  // PoS
+  const posEmbedded = process.env.POS_EMBEDDED;
+  if (posEmbedded) {
     config.pos = {
-      embedded: process.env.POS_EMBEDDED === "true",
+      embedded: posEmbedded === "true",
     };
   }
 
+  //Build
   config.build = {
     include_config_on_deploy: true,
   };
 
-  webhookWriter(config);
-
-  let str = toml.stringify(config);
+  //Write to toml
+  let str = toml.stringify(config as TomlConfig);
   str =
     "# Avoid writing to toml directly. Use your .env file instead\n\n" + str;
 
   fs.writeFileSync(path.join(process.cwd(), "shopify.app.toml"), str);
+  console.log("Written TOML to root");
 
   const extensionsDir = path.join("..", "extension");
 
   config.extension_directories = ["./extensions/**"];
-  let extensionStr = toml.stringify(config);
+  let extensionStr = toml.stringify(config as TomlConfig);
   extensionStr =
     "# Avoid writing to toml directly. Use your .env file instead\n\n" +
     extensionStr;
 
   config.extension_directories = ["extension/extensions/**"];
-  let globalStr = toml.stringify(config);
+  let globalStr = toml.stringify(config as TomlConfig);
   globalStr =
     "# Avoid writing to toml directly. Use your .env file instead\n\n" +
     globalStr;
@@ -154,13 +123,15 @@ try {
       path.join(process.cwd(), "..", "shopify.app.toml"),
       globalStr
     );
+    console.log("Written TOML to root");
+
     fs.writeFileSync(
       path.join(extensionsDir, "shopify.app.toml"),
       extensionStr
     );
+    console.log("Written TOML to extension");
   }
 } catch (e) {
-  const error = e as Error;
   console.error("---> An error occured while writing toml files");
-  console.log(error.message);
+  console.log(e instanceof Error ? e.message : String(e));
 }
