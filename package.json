@@ -21,7 +21,7 @@
     "-----> Shopify <-----": "",
     "g:install": "npm i -g @shopify/cli@latest",
     "shopify": "shopify",
-    "update:config": "node _developer/tomlWriter.js; npm run pretty; shopify app deploy;",
+    "update:config": "node _developer/tomlWriter; npm run pretty; shopify app deploy;",
     "update:url": "node _developer/updateDashboard.js",
     "-----> Database <-----": "",
     "pg:create": "mkdir database; pg_ctl -D database init",
@@ -41,30 +41,33 @@
     "codegen:watch": "graphql-codegen --watch"
   },
   "dependencies": {
-    "@prisma/client": "^6.6.0",
+    "@prisma/client": "^6.7.0",
     "@shopify/polaris": "^13.9.5",
     "@shopify/polaris-icons": "^9.3.1",
     "@shopify/shopify-api": "^11.12.0",
     "cryptr": "^6.3.0",
-    "next": "15.2.4",
+    "next": "15.3.1",
     "next-api-middleware": "^3.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@graphql-codegen/cli": "^5.0.5",
+    "@graphql-codegen/cli": "^5.0.6",
     "@graphql-codegen/typescript": "^4.1.6",
-    "@graphql-codegen/typescript-operations": "^4.6.0",
+    "@graphql-codegen/typescript-operations": "^4.6.1",
     "@graphql-codegen/typescript-react-apollo": "^4.3.2",
     "@iarna/toml": "^2.2.5",
-    "@shopify/cli-kit": "^3.78.0",
-    "@types/node": "^20.14.11",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
+    "@shopify/cli-kit": "^3.79.1",
+    "@types/node": "^20.17.46",
+    "@types/react": "^18.3.21",
+    "@types/react-dom": "^18.3.7",
+    "autoprefixer": "^10.4.21",
     "dotenv": "^16.5.0",
-    "npm-check-updates": "^17.1.18",
+    "npm-check-updates": "^18.0.1",
+    "postcss": "^8.5.3",
     "prettier": "^3.5.3",
-    "prisma": "^6.6.0",
-    "typescript": "^5.5.3"
+    "prisma": "^6.7.0",
+    "tailwindcss": "^4.1.6",
+    "typescript": "^5.8.3"
   }
 }

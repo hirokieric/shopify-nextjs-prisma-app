@@ -5,6 +5,7 @@ import translations from "@shopify/polaris/locales/en.json";
 import Link from "next/link";
 import { AppProps } from "next/app";
 import { NextPage } from "next";
+import "@/styles/globals.css";
 
 declare global {
   namespace JSX {

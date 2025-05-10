@@ -43,6 +43,20 @@ const offlineClientProvider: ClientProvider = {
     const client = new shopify.clients.Graphql({ session });
     return client;
   },
+  /**
+   * Creates a Shopify Storefront client for offline access.
+   * @async
+   * @param {Object} params - The request and response objects.
+   * @param {string} params.shop - The shop's domain
+   */
+  storefrontClient: async ({ shop }) => {
+    const session = await fetchOfflineSession(shop || "");
+    if (!session) {
+      throw new Error("No session found");
+    }
+    const client = new shopify.clients.Storefront({ session });
+    return { client, shop, session };
+  },
 };
 
 /**
@@ -100,6 +114,25 @@ const onlineClientProvider: ClientProvider = {
     }
     const client = new shopify.clients.Graphql({ session });
     return client;
+  },
+  /**
+   * Creates a Shopify Storefront client for online access.
+   * @async
+   * @param {Object} params - The request and response objects.
+   * @param {import('next').NextApiRequest} params.req - The Next.js API request object
+   * @param {import('next').NextApiResponse} params.res - The Next.js API response object
+   */
+  storefrontClient: async ({ req, res }) => {
+    if (!req || !res) {
+      throw new Error("Request and response objects are required");
+    }
+    const session = await fetchOnlineSession({ req, res });
+    if (!session) {
+      throw new Error("No session found");
+    }
+    const client = new shopify.clients.Storefront({ session });
+    const { shop } = session;
+    return { client, shop, session };
   },
 };
 

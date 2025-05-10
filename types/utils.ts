@@ -17,6 +17,11 @@ export interface ClientProvider {
     req?: ApiRequest;
     res?: ApiResponse;
   }) => Promise<any>;
+  storefrontClient: (params: {
+    shop?: string;
+    req?: ApiRequest;
+    res?: ApiResponse;
+  }) => Promise<any>;
 }
 
 export interface SetupCheckResult {
